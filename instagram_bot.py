@@ -1,9 +1,11 @@
 from selenium import webdriver
+from selenium.webdriver.common.alert import Alert
 from selenium.webdriver.common.keys import Keys
 #import time
 from utility_methods.utility_methods import *
 import urllib.request
 import os
+import sys
 
 
 class InstaBot:
@@ -25,16 +27,15 @@ class InstaBot:
             logged_in:bool: Boolean whether current user is logged in or not.
         """
 
-        self.last_height = self.new_height
+        self.driver = webdriver.Chrome(config['ENVIRONMENT']['CHROMEDRIVER_PATH'])
         self.new_height = self.driver.execute_script("return document.body.scrollHeight")
+        self.last_height = self.new_height
         self.username = config['IG_AUTH']['USERNAME']
         self.password = config['IG_AUTH']['PASSWORD']
 
         self.login_url = config['IG_URLS']['LOGIN']
         self.nav_user_url = config['IG_URLS']['NAV_USER']
         self.get_tag_url = config['IG_URLS']['SEARCH_TAGS']
-
-        self.driver = webdriver.Chrome(config['ENVIRONMENT']['CHROMEDRIVER_PATH'])
 
         self.logged_in = False
 
@@ -45,16 +46,20 @@ class InstaBot:
         """
 
         self.driver.get(self.login_url)
+        # accept Cookies popup
+        self.driver.find_element_by_xpath("//*[text()='Accept']").click()
+        time.sleep(2)
 
-        login_btn = self.driver.find_element_by_xpath(
-            '//*[@id="react-root"]/section/main/div/article/div/div[1]/div/form/div[3]')  # login button xpath changes after text is entered, find first
+        self.driver.find_element_by_name('username').send_keys(self.username)
+        self.driver.find_element_by_name('password').send_keys(self.password)
+        self.driver.find_element_by_xpath("//*[text()='Log In']").click()
+        time.sleep(3)
 
-        username_input = self.driver.find_element_by_name('username')
-        password_input = self.driver.find_element_by_name('password')
-
-        username_input.send_keys(self.username)
-        password_input.send_keys(self.password)
-        login_btn.click()
+        # dont save auth info
+        self.driver.find_element_by_xpath("//*[text()='Not Now']").click()
+        time.sleep(2)
+        # dont turn on notifications
+        self.driver.find_element_by_xpath("//*[text()='Not Now']").click()
 
     @insta_method
     def search_tag(self, tag):
@@ -168,15 +173,19 @@ class InstaBot:
             self.driver.find_elements_by_class_name('ckWGn')[0].click()
 
     @insta_method
-    def comment_post(self, text):
+    def comment_post(self, url, text):
         """
         Comments on a post that is in modal form
         """
 
-        comment_input = self.driver.find_elements_by_class_name('Ypffh')[0]
+        self.driver.get(url)
+        comment_input = self.driver.find_element_by_name('Add a comment...')
         comment_input.click()
-        comment_input.send_keys(text)
-        comment_input.send_keys(Keys.RETURN)
+        time.sleep(10)
+        new_comment_input = self.driver.find_element_by_class_name('Ypffh focus-visible')
+        print(new_comment_input)
+        #comment_input.send_keys(Keys.ENTER)
+        new_comment_input.send_keys(text)
 
         print('Comment.')
 
@@ -235,6 +244,8 @@ if __name__ == '__main__':
     logger = get_logger(logger_file_path)
 
     bot = InstaBot()
+    #bot.disable_popup()
     bot.login()
-
-    bot.like_latest_posts('johngfisher', 2, like=True)
+    bot.nav_user('daily_frenchie')
+    url = sys.argv[1]
+    bot.comment_post(url, '@biadias_98')
