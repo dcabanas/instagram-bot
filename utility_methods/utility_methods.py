@@ -14,7 +14,7 @@ def init_config(config_file_path):
 
     # asserting configuration file has the correct extension
     path = config_file_path.split('.')
-    assert(path[len(path)-1] == 'ini')
+    assert (path[len(path) - 1] == 'ini')
 
     config = configparser.ConfigParser()
     config.read(config_file_path)
@@ -31,18 +31,18 @@ def get_logger(logger_file_path):
 
     logger = logging.getLogger('InstaBotLogger')
     logger.setLevel(logging.DEBUG)
- 
+
     # log file handler
     fh = logging.FileHandler(logger_file_path)
- 
+
     # log format
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
- 
+
     logger.addHandler(fh)
     return logger
- 
- 
+
+
 def exception(func):
     """
     Exception logging decorator
@@ -58,12 +58,12 @@ def exception(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except:
+        finally:
             # log the exception
             msg = "Exception in method {}".format(func.__name__)
             logger = get_logger('bot.log')
             logger.exception(msg)
- 
+
     return wrapper
 
 

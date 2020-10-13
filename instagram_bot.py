@@ -1,6 +1,6 @@
 from selenium import webdriver
-#from selenium.webdriver.common.keys import Keys
-import time
+from selenium.webdriver.common.keys import Keys
+#import time
 from utility_methods.utility_methods import *
 import urllib.request
 import os
@@ -8,7 +8,7 @@ import os
 
 class InstaBot:
 
-    def __init__(self, username=None, password=None):
+    def __init__(self):
         """"
         Creates an instance of InstaBot class.
 
@@ -18,13 +18,15 @@ class InstaBot:
 
         Attributes:
             driver_path:str: Path to the chromedriver.exe
-            driver:str: Instance of the Selenium Webdriver (chrome 72) 
+            driver:str: Instance of the Selenium Webdriver (chrome 86)
             login_url:str: Url for logging into IG.
             nav_user_url:str: Url to go to a users homepage on IG.
             get_tag_url:str: Url to go to search for posts with a tag on IG.
             logged_in:bool: Boolean whether current user is logged in or not.
         """
 
+        self.last_height = self.new_height
+        self.new_height = self.driver.execute_script("return document.body.scrollHeight")
         self.username = config['IG_AUTH']['USERNAME']
         self.password = config['IG_AUTH']['PASSWORD']
 
@@ -36,7 +38,6 @@ class InstaBot:
 
         self.logged_in = False
 
-
     @insta_method
     def login(self):
         """
@@ -45,7 +46,8 @@ class InstaBot:
 
         self.driver.get(self.login_url)
 
-        login_btn = self.driver.find_element_by_xpath('//*[@id="react-root"]/section/main/div/article/div/div[1]/div/form/div[3]') # login button xpath changes after text is entered, find first
+        login_btn = self.driver.find_element_by_xpath(
+            '//*[@id="react-root"]/section/main/div/article/div/div[1]/div/form/div[3]')  # login button xpath changes after text is entered, find first
 
         username_input = self.driver.find_element_by_name('username')
         password_input = self.driver.find_element_by_name('password')
@@ -54,18 +56,16 @@ class InstaBot:
         password_input.send_keys(self.password)
         login_btn.click()
 
-
     @insta_method
     def search_tag(self, tag):
         """
-        Naviagtes to a search for posts with a specific tag on IG.
+        Navigates to a search for posts with a specific tag on IG.
 
         Args:
             tag:str: Tag to search for
         """
 
         self.driver.get(self.get_tag_url.format(tag))
-
 
     @insta_method
     def nav_user(self, user):
@@ -77,7 +77,6 @@ class InstaBot:
         """
 
         self.driver.get(self.nav_user_url.format(user))
-
 
     @insta_method
     def follow_user(self, user):
@@ -95,7 +94,6 @@ class InstaBot:
         for btn in follow_buttons:
             btn.click()
 
-    
     @insta_method
     def unfollow_user(self, user):
         """
@@ -116,30 +114,27 @@ class InstaBot:
                 unfollow_confirmation.click()
         else:
             print('No {} buttons were found.'.format('Following'))
-    
 
     @insta_method
     def download_user_images(self, user):
         """
         Downloads all images from a users profile.
-
         """
-    
+
         self.nav_user(user)
 
         img_srcs = []
         finished = False
         while not finished:
+            finished = self.infinite_scroll()  # scroll down
 
-            finished = self.infinite_scroll() # scroll down
+            img_srcs.extend(
+                [img.get_attribute('src') for img in self.driver.find_elements_by_class_name('FFVAD')])  # scrape srcs
 
-            img_srcs.extend([img.get_attribute('src') for img in self.driver.find_elements_by_class_name('FFVAD')]) # scrape srcs
-
-        img_srcs = list(set(img_srcs)) # clean up duplicates
+        img_srcs = list(set(img_srcs))  # clean up duplicates
 
         for idx, src in enumerate(img_srcs):
             self.download_image(src, idx, user)
-    
 
     @insta_method
     def like_latest_posts(self, user, n_posts, like=True):
@@ -162,32 +157,31 @@ class InstaBot:
         imgs.extend(self.driver.find_elements_by_class_name('_9AhH0'))
 
         for img in imgs[:n_posts]:
-            img.click() 
-            time.sleep(1) 
+            img.click()
+            time.sleep(1)
             try:
                 self.driver.find_element_by_xpath("//*[@aria-label='{}']".format(action)).click()
             except Exception as e:
                 print(e)
 
-            #self.comment_post('beep boop testing bot')
+            # self.comment_post('beep boop testing bot')
             self.driver.find_elements_by_class_name('ckWGn')[0].click()
 
+    @insta_method
+    def comment_post(self, text):
+        """
+        Comments on a post that is in modal form
+        """
 
-    #@insta_method
-    #def comment_post(self, text):
-        #"""
-        #Comments on a post that is in modal form
-        #"""
+        comment_input = self.driver.find_elements_by_class_name('Ypffh')[0]
+        comment_input.click()
+        comment_input.send_keys(text)
+        comment_input.send_keys(Keys.RETURN)
 
-        #comment_input = self.driver.find_elements_by_class_name('Ypffh')[0]
-        #comment_input.click()
-        #comment_input.send_keys(text)
-        #comment_input.send_keys(Keys.Return)
+        print('Comment.')
 
-        #print('Commentd.')
-
-
-    def download_image(self, src, image_filename, folder):
+    @staticmethod
+    def download_image(src, image_filename, folder):
         """
         Creates a folder named after a user to to store the image, then downloads the image to the folder.
         """
@@ -198,7 +192,6 @@ class InstaBot:
 
         img_filename = 'image_{}.jpg'.format(image_filename)
         urllib.request.urlretrieve(src, '{}/{}'.format(folder, img_filename))
-
 
     def infinite_scroll(self):
         """
@@ -217,15 +210,10 @@ class InstaBot:
 
         time.sleep(SCROLL_PAUSE_TIME)
 
-        self.new_height = self.driver.execute_script("return document.body.scrollHeight")
-
-
         if self.new_height == self.last_height:
             return True
 
-        self.last_height = self.new_height
         return False
-
 
     def find_buttons(self, button_text):
         """
@@ -241,8 +229,7 @@ class InstaBot:
 
 
 if __name__ == '__main__':
-
-    config_file_path = './config.ini' 
+    config_file_path = './config.ini'
     logger_file_path = './bot.log'
     config = init_config(config_file_path)
     logger = get_logger(logger_file_path)
