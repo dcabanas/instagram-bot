@@ -1,0 +1,16 @@
+<InstaBot>:
+    url_text_input: url
+    Label:
+        text: "Post:"
+        pos: 130,200
+        size: 100, 30
+        font_size: 17
+    TextInput:
+        id: url
+        pos: 200,200
+        size: 550, 30
+    Button:
+        text: "Submit"
+        pos: 200,160
+        size: 100, 30
+        on_release: root.submit_url()

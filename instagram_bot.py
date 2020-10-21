@@ -1,32 +1,20 @@
 from selenium import webdriver
-from selenium.webdriver.common.alert import Alert
-from selenium.webdriver.common.keys import Keys
-#import time
+import time
+_ = time; del _
 from utility_methods.utility_methods import *
 import urllib.request
 import os
-import sys
-
+import main
 
 class InstaBot:
 
     def __init__(self):
         """"
         Creates an instance of InstaBot class.
-
-        Args:
-            username:str: The username of the user, if not specified, read from configuration.
-            password:str: The password of the user, if not specified, read from configuration.
-
-        Attributes:
-            driver_path:str: Path to the chromedriver.exe
-            driver:str: Instance of the Selenium Webdriver (chrome 86)
-            login_url:str: Url for logging into IG.
-            nav_user_url:str: Url to go to a users homepage on IG.
-            get_tag_url:str: Url to go to search for posts with a tag on IG.
-            logged_in:bool: Boolean whether current user is logged in or not.
         """
 
+        #options = webdriver.ChromeOptions()
+        #options.add_argument('headless')
         self.driver = webdriver.Chrome(config['ENVIRONMENT']['CHROMEDRIVER_PATH'])
         self.new_height = self.driver.execute_script("return document.body.scrollHeight")
         self.last_height = self.new_height
@@ -36,6 +24,7 @@ class InstaBot:
         self.login_url = config['IG_URLS']['LOGIN']
         self.nav_user_url = config['IG_URLS']['NAV_USER']
         self.get_tag_url = config['IG_URLS']['SEARCH_TAGS']
+        self.user_tags = config['IG_USERS']['TAGS']
 
         self.logged_in = False
 
@@ -53,7 +42,7 @@ class InstaBot:
         self.driver.find_element_by_name('username').send_keys(self.username)
         self.driver.find_element_by_name('password').send_keys(self.password)
         self.driver.find_element_by_xpath("//*[text()='Log In']").click()
-        time.sleep(3)
+        time.sleep(5)
 
         # dont save auth info
         self.driver.find_element_by_xpath("//*[text()='Not Now']").click()
@@ -173,21 +162,19 @@ class InstaBot:
             self.driver.find_elements_by_class_name('ckWGn')[0].click()
 
     @insta_method
-    def comment_post(self, url, text):
+    def comment_post(self, url, tags):
         """
-        Comments on a post that is in modal form
+        Comments on a post
         """
 
         self.driver.get(url)
-        comment_input = self.driver.find_element_by_name('Add a comment...')
-        comment_input.click()
-        time.sleep(10)
-        new_comment_input = self.driver.find_element_by_class_name('Ypffh focus-visible')
-        print(new_comment_input)
-        #comment_input.send_keys(Keys.ENTER)
-        new_comment_input.send_keys(text)
-
-        print('Comment.')
+        for tag in tags:
+            comment_input = self.driver.find_element_by_xpath("//*[@aria-label='Add a comment…']")
+            comment_input.click()
+            comment_input = self.driver.find_element_by_xpath("//*[@aria-label='Add a comment…']")
+            comment_input.send_keys(tag)
+            self.driver.find_element_by_xpath("//*[text()='Post']").click()
+            time.sleep(2)
 
     @staticmethod
     def download_image(src, image_filename, folder):
@@ -226,7 +213,8 @@ class InstaBot:
 
     def find_buttons(self, button_text):
         """
-        Finds buttons for following and unfollowing users by filtering follow elements for buttons. Defaults to finding follow buttons.
+        Finds buttons for following and unfollowing users by filtering follow elements for buttons.
+        Defaults to finding follow buttons.
 
         Args:
             button_text: Text that the desired button(s) has 
@@ -238,14 +226,16 @@ class InstaBot:
 
 
 if __name__ == '__main__':
+    # loads GUI
+    main.start()
+
+    # config loading
     config_file_path = './config.ini'
     logger_file_path = './bot.log'
     config = init_config(config_file_path)
     logger = get_logger(logger_file_path)
 
+    # main script
     bot = InstaBot()
-    #bot.disable_popup()
     bot.login()
-    bot.nav_user('daily_frenchie')
-    url = sys.argv[1]
-    bot.comment_post(url, '@biadias_98')
+    bot.comment_post(main.url, bot.user_tags.split(","))

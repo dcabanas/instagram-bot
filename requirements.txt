@@ -1,2 +1,5 @@
 selenium==3.141.0
 urllib3==1.25.10
+
+kivy~=1.11.1
+future~=0.18.2
